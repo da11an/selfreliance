@@ -1,0 +1,91 @@
+---
+title: "Self-Reliance Plan"
+params:
+  set_author: placeholder
+  set_date: placeholder
+  set_member: placeholder
+  set_spouse: placeholder
+  set_needs: placeholder
+  set_income: placeholder
+  set_expenses: placeholder
+  set_financeBalance: placeholder
+  set_financePlot: placeholder
+  set_resourcesIndividual: resourcesIndividual
+  set_resourcesFamily: resourcesFamily
+  set_resourcesCommunity: resourcesCommunity
+  set_myPlan: myPlan
+  set_serviceIdeas: NA
+  set_servicePlan: NA
+author: "`r params$set_author`"
+date: "`r params$set_date`"
+output: html_document
+---
+### Needs
+*Immediate needs may include food, clothing, medical or emotional care, or housing. Longer-term needs may include education or improved employment.*
+```{r needs, echo=FALSE}
+tags$p(tags$strong(params$set_needs))
+```
+
+### Income and Expenses
+
+#### Income
+```{r income, echo=FALSE}
+params$set_income
+```
+
+#### Expenses
+```{r expenses, echo=FALSE}
+params$set_expenses
+```
+
+#### Budget Summary
+<blockquote>
+```{r financeBalance, echo=FALSE}
+tags$span(params$set_financeBalance)
+```
+</blockquote>
+
+```{r financePlot, echo=FALSE, fig.width = 10, fig.height = 7}
+params$set_financePlot
+```
+
+### Available Resources
+<p>
+<u>Individual resources and skills</u>: 
+```{r resInd, echo=FALSE}
+tags$span(tags$strong(params$set_resourcesIndividual))
+```
+</p>
+<p>
+<u>Help and resources available from family members (parents, children, siblings, others)</u>:
+```{r resFam, echo=FALSE}
+tags$span(tags$strong(params$set_resourcesFamily))
+```
+</p>
+<p>
+<u>Relevant community resources</u>:
+```{r resCom, echo=FALSE}
+tags$span(tags$strong(params$set_resourcesCommunity))
+```
+</p>
+
+### My Plan to Become More Self-Reliant
+```{r myPlan, echo=FALSE}
+params$set_myPlan
+```
+
+### Work or Service
+My work or service contribution in return for any assistance I may receive  
+<u>Ideas to share with the bishop or branch president</u>:
+```{r serviceIdeas, echo=FALSE}
+tags$strong(params$set_serviceIdeas)
+```
+
+<u>The work or service assignment agreed to with the bishop or branch president</u>:
+```{r servicePlan, echo=FALSE}
+tags$strong(params$set_servicePlan)
+```
+
+### My Commitment
+This was digitally signed by: <strong>`r params$set_member`</strong> on <strong>`r params$set_date`</strong>.
+Spouse digital signature: <strong>`r params$set_spouse`</strong> on <strong>`r params$set_date`</strong>.
