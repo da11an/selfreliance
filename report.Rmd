@@ -20,72 +20,74 @@ author: "`r params$set_author`"
 date: "`r params$set_date`"
 output: html_document
 ---
-### Needs
-*Immediate needs may include food, clothing, medical or emotional care, or housing. Longer-term needs may include education or improved employment.*
+### Step 1: What are my needs?
+<div class="bg bg-info">
+Immediate needs may include food, clothing, medical or emotional care, or housing. Longer-term needs may include education or improved employment.
+</div>
 ```{r needs, echo=FALSE}
-tags$p(tags$strong(params$set_needs))
+tags$p(params$set_needs)
 ```
 
-### Income and Expenses
+### Step 2: What are my income and expenses?
 
-#### Income
+#### Monthly income
 ```{r income, echo=FALSE}
 params$set_income
 ```
 
-#### Expenses
+#### Monthly expenses
 ```{r expenses, echo=FALSE}
 params$set_expenses
 ```
 
 #### Budget Summary
-<blockquote>
+##### Plain-text interpretation of budget:
 ```{r financeBalance, echo=FALSE}
-tags$span(params$set_financeBalance)
+tags$cite(params$set_financeBalance)
 ```
-</blockquote>
+
 
 ```{r financePlot, echo=FALSE, fig.width = 10, fig.height = 7}
 params$set_financePlot
 ```
 
-### Available Resources
-<p>
-<u>Individual resources and skills</u>: 
+### Step 3: What other resources are available?
+<ul><li><span class = "bg bg-info">Individual resources and skills:</span> 
 ```{r resInd, echo=FALSE}
-tags$span(tags$strong(params$set_resourcesIndividual))
+tags$span(params$set_resourcesIndividual)
 ```
-</p>
-<p>
-<u>Help and resources available from family members (parents, children, siblings, others)</u>:
+<li><span class = "bg bg-info">Help and resources available from family members (parents, children, siblings, others):</span> 
 ```{r resFam, echo=FALSE}
-tags$span(tags$strong(params$set_resourcesFamily))
+tags$span(params$set_resourcesFamily)
 ```
-</p>
-<p>
-<u>Relevant community resources</u>:
+<li><span class = "bg bg-info">Relevant community resources:</span> 
 ```{r resCom, echo=FALSE}
-tags$span(tags$strong(params$set_resourcesCommunity))
+tags$span(params$set_resourcesCommunity)
 ```
-</p>
+</ul>
 
-### My Plan to Become More Self-Reliant
+### Step 4: What is my personal or family plan to become more self-reliant?
+<p class="bg bg-info">As part of your plan, consider participating in a self-reliance group.</p>
 ```{r myPlan, echo=FALSE}
 params$set_myPlan
 ```
 
-### Work or Service
-My work or service contribution in return for any assistance I may receive  
-<u>Ideas to share with the bishop or branch president</u>:
+### Step 5: What work or service will I contribute in return for any assistance I may receive?
+<ul>
+<li><span class="bg bg-info">Ideas to share with the bishop or branch president:</span> 
 ```{r serviceIdeas, echo=FALSE}
-tags$strong(params$set_serviceIdeas)
+tags$span(params$set_serviceIdeas)
 ```
 
-<u>The work or service assignment agreed to with the bishop or branch president</u>:
+<span class="bg bg-info">After consulting with the bishop or branch president, describe the work or service assignment you will do:</span> 
 ```{r servicePlan, echo=FALSE}
-tags$strong(params$set_servicePlan)
+tags$span(params$set_servicePlan)
 ```
+</ul>
 
-### My Commitment
-This was digitally signed by: <strong>`r params$set_member`</strong> on <strong>`r params$set_date`</strong>.
-Spouse digital signature: <strong>`r params$set_spouse`</strong> on <strong>`r params$set_date`</strong>.
+### Commitment
+`r if(shiny::isTruthy(params$set_member)){"<span class='bg bg-info'>Member's signature:</span> "}`
+<span>`r params$set_member`</span> <cite>`r if(shiny::isTruthy(params$set_member)){params$set_date}`</cite>
+
+`r if(shiny::isTruthy(params$set_spouse)){"<span class='bg bg-info'>Spouse's signature:</span> "}`
+<span>`r params$set_spouse`</span> <cite>`r if(shiny::isTruthy(params$set_spouse)){params$set_date}`</cite>

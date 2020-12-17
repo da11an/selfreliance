@@ -2,6 +2,8 @@
 # Adaptation of https://www.churchofjesuschrist.org/bc/content/shared/content/english/pdf/welfare/PD60007387_000_SelfReliancePlan_Member_Web_Interactive.pdf
 # Updated: 2020-12-15
 
+shiny.maxRequestSize=100*1024^2
+
 library(shiny)
 library(DT)
 library(ggplot2)
@@ -268,23 +270,27 @@ financePlot <- function(df_income, df_expenses, screen_dim = NULL) {
     #         size = 'l'
     #     )
     # )
-
-    ggplot(df, aes(x = Budget, y = Amount, label = Description, fill = id)) +
-        geom_col(col = "white") +
-        geom_text(aes(y = y_pos_text, angle = orientation)) +
-        facet_grid(rows = vars(Time)) +
-        coord_flip() +
-        theme_hc(base_size = 14, base_family = 'verdana') +
-        xlab("Budget Item") +
-        # scale_fill_continuous() + 
-        scale_fill_manual(values = colorRampPalette(
-            RColorBrewer::brewer.pal(
-                min(12, unique(length(df$Description))), "Pastel1"))(
-                    length(unique(df$Description)))) +
-        theme(legend.position = "none") +
-        ggtitle(label = "My Budget",
-                subtitle = "Amount ($)") +
-        ylab("Amount ($)")
+    
+    if (nrow(df)>0) {
+        ggplot(df, aes(x = Budget, y = Amount, label = Description, fill = id)) +
+            geom_col(col = "white") +
+            geom_text(aes(y = y_pos_text, angle = orientation)) +
+            facet_grid(rows = vars(Time)) +
+            coord_flip() +
+            theme_hc(base_size = 14, base_family = 'verdana') +
+            xlab("Budget Item") +
+            # scale_fill_continuous() + 
+            scale_fill_manual(values = colorRampPalette(
+                RColorBrewer::brewer.pal(
+                    min(12, unique(length(df$Description))), "Pastel1"))(
+                        length(unique(df$Description)))) +
+            theme(legend.position = "none") +
+            ggtitle(label = "Monthly Budget",
+                    subtitle = "Amount ($)") +
+            ylab("Amount ($)")
+    } else {
+        helpText("No budget information provided for plot")
+    }
 }
 
 verbose_balance <- function(income, expenses) {
@@ -364,9 +370,8 @@ verbose_balance <- function(income, expenses) {
 # Define UI for application that draws a histogram
 ui <- function(request) {
     fluidPage(
-        theme = shinytheme('paper'),
+        theme = shinytheme('yeti'),
         # themeSelector(),
-        
         
         # screen dimensions ----
         tags$head(tags$script('
@@ -401,10 +406,13 @@ ui <- function(request) {
                            href = "https://www.churchofjesuschrist.org/bc/content/shared/content/english/pdf/welfare/PD60007387_000_SelfReliancePlan_Member_Web_Interactive.pdf"))
                 ),
                 tags$h4("What are my needs?"),
-                helpText("Immediate needs may include food, clothing, medical or 
+                textAreaInput("needs", "Immediate needs may include food, clothing, medical or 
                 emotional care, or housing. Longer-term needs may include education 
                 or improved employment. Identify your needs in the space below."),
-                textAreaInput("needs", NULL)
+                hr(),
+                wellPanel(
+                    fileInput('uploadsession', "Upload and Restore a Previous Session", accept = "RData")
+                )
             ),
             
             # step 2: finances income tab ----
@@ -486,39 +494,11 @@ ui <- function(request) {
                 tags$h4("Commitment"),
                 textInput("memberSign", "Member Signature (type name to sign)"),
                 textInput("spouseSign", "Spouse Signature (type name to sign)"),
-                downloadButton("report", "Download Full Report"),
-                br(),
-                hr(),
-                tags$details(
-                    "Your session information is captured in the address bar. Simply bookmark
-                    this page to save it for later or copy the address into an email to share
-                    or save. If your URL is more than 2000 characters it may not load properly in
-                    some browsers. If this happens, try a non-Microsoft browser like Firefox, 
-                    Safari, or Chrome. Please note that your financial information is never saved by this
-                    tool, although the download and link saving (bookmarking) options allow you
-                    to keep a record of your work.")    
+                wellPanel(
+                    downloadButton("report", "Download Pretty Report"),
+                    downloadButton("mysession", "Download Session To Restore Later")
+                )
             )
-            
-            # commitment tab ----
-            # tabPanel(
-            #     title = "", #Commitment",
-            #     icon = icon("pen"),
-            #     tags$p("Type your name to indicate your commitment to following
-            #            through on your plan."),
-            #     textInput("memberSign", "Member Signature (type name to sign)"),
-            #     textInput("spouseSign", "Spouse Signature (type name to sign)"),
-            #     downloadButton("report", "Download Full Report"),
-            #     br(),
-            #     hr(),
-            #     helpText(
-            #         "Your session information is captured in the address bar. Simply bookmark
-            #         this page to save it for later or copy the address into an email to share
-            #         or save. If your URL is more than 2000 characters it may not load properly in
-            #         some browsers. If this happens, try a non-Microsoft browser like Firefox, 
-            #         Safari, or Chrome. Please note that your financial information is never saved by this
-            #         tool, although the download and link saving (bookmarking) options allow you
-            #         to keep a record of your work.")
-            # )
         )
     )
 }
@@ -533,57 +513,53 @@ server <- function(input, output, session) {
         state$values$expenses <- values$expenses
         state$values$plan <- values$plan
     })
-    
+
     # Read values from state$values when we restore
     onRestore(function(state, url) {
-        values$income <- as_tibble(state$values$income) %>% #comes back as list, make it tibble again 
+        values$income <- as_tibble(state$values$income) %>% #comes back as list, make it tibble again
             mutate(
                 Description = as.character(Description),
                 Current = as.numeric(Current),
-                Future = if_else(is.na(Future), 
-                                 as.numeric(Current), 
+                Future = if_else(is.na(Future),
+                                 as.numeric(Current),
                                  as.numeric(Future)))
         values$expenses <- as_tibble(state$values$expenses) %>%
             mutate(
                 Description = as.character(Description),
                 Current = as.numeric(Current),
-                Future = if_else(is.na(Future), 
-                                 as.numeric(Current), 
+                Future = if_else(is.na(Future),
+                                 as.numeric(Current),
                                  as.numeric(Future)))
         values$plan <- as_tibble(state$values$plan) %>%
-            mutate(`Resources and skills needed for self-reliance` = 
+            mutate(`Resources and skills needed for self-reliance` =
                        as.character(`Resources and skills needed for self-reliance`),
                    `Steps to be taken` = as.character(`Steps to be taken`),
                    `By when` = as.Date(as.character(`By when`)))
     })
-    
+
     # Exclude buttons from bookmarking
     setBookmarkExclude(
         c(paste0("income_col_", seq(3)),
           paste0("expenses_col_", seq(3)),
           paste0("plan_col_", seq(3)),
-          outer(c("income", "expenses", "plan"), 
-                c("_editrow", "_addrow", "_deleterow", 
+          outer(c("income", "expenses", "plan"),
+                c("_editrow", "_addrow", "_deleterow",
                   "_rows_selected", "_add",
-                  "_cell_clicked", "_row_last_clicked", "_rows_all", "_rows_current"), 
+                  "_cell_clicked", "_row_last_clicked", "_rows_all", "_rows_current"),
                 FUN = "paste0")[1:15],
-          
+
           "memberSign", "spouseSign"))
-    
+
     observe({
         # Trigger this observer every time an input changes
         reactiveValuesToList(input)
         session$doBookmark()
     })
-    
+
     onBookmarked(function(url) {
         updateQueryString(url)
     })
-    
-    # screen dimensions ----
-    # output$dimension_display <- renderText({
-    #     paste("dims:", input$dimension[1], input$dimension[2], input$dimension[2]/input$dimension[1])
-    # }) %>% debounce(2000)
+
     
     my_screen_width <- reactiveVal(300)
     observeEvent(input$dimension, { #require 2% change in screen width for a graph update
@@ -593,25 +569,68 @@ server <- function(input, output, session) {
     })
     
     # initialize tables ----
-    values <- reactiveValues()
-    
-    values[['income']] <- tibble(
-        Description = character(0),
-        Current     = numeric(0),
-        Future      = numeric(0)
+    values <- reactiveValues(
+        income = tibble(
+            Description = character(0),
+            Current     = numeric(0),
+            Future      = numeric(0)
+        ),
+        expenses = tibble(
+            Description = character(0), 
+            Current     = numeric(0),
+            Future      = numeric(0)
+        ),
+        plan = tibble(
+            `Resources and skills needed for self-reliance` = character(0),
+            `Steps to be taken`                             = character(0),
+            `By when`                                       = character(0) %>% as.Date
+        ),
+        needs = character(0L),
+        resources = list(individual = character(0L),
+                         family = character(0L),
+                         community = character(0L)),
+        service = list(proposed = character(0L),
+                       confirmed = character(0L)),
+        commitment = list(member = character(0L),
+                          spouse = character(0L))
     )
     
-    values[['expenses']] <- tibble(
-        Description = character(0), 
-        Current     = numeric(0),
-        Future      = numeric(0)
-    )
-    
-    values[['plan']] <- tibble(
-        `Resources and skills needed for self-reliance` = character(0),
-        `Steps to be taken`                             = character(0),
-        `By when`                                       = character(0) %>% as.Date
-    )
+    # overwrite values from upload ----
+    observe({
+        print('trigger upload')
+        filepath <- input$uploadsession$datapath
+        ext <- tools::file_ext(filepath)
+        
+        req(filepath)
+        # validate(need(ext == "RData", "Please upload session RData file produced by this app"))
+        print(filepath)
+        print(ext)
+        
+        load(filepath)
+        print(summary(selfreliance))
+        print(selfreliance)
+        
+        # restore values from file
+        values$income <- selfreliance$income
+        values$expenses <- selfreliance$expenses
+        values$plan <- selfreliance$plan
+        
+        values$needs <- selfreliance$needs
+        updateTextAreaInput(session, "needs", value = selfreliance$needs)
+        
+        values$resources <- selfreliance$resources
+        updateTextInput(session, "resourcesIndividual", value = selfreliance$resources$individual)
+        updateTextInput(session, "resourcesFamily", value = selfreliance$resources$family)
+        updateTextInput(session, "resourcesCommunity", value = selfreliance$resources$community)
+        
+        values$service <- selfreliance$service
+        updateTextInput(session, "myServiceIdeas", value = selfreliance$service$proposed)
+        updateTextInput(session, "myServicePlan", value = selfreliance$service$confirmed)
+        
+        values$commitment <- selfreliance$commitment
+        updateTextInput(session, "spouseSign", value = selfreliance$commitment$spouse)
+        updateTextInput(session, "memberSign", value = selfreliance$commitment$member)
+    })
     
     # 'add' modals (using dfInput) ----
     # income add modal
@@ -803,14 +822,28 @@ server <- function(input, output, session) {
         verbose_balance(values[['income']], values[['expenses']])
     })
     
-    # output$expenseDonutPlot <- renderPlot({
-    #     financePlot(values[['income']], values[['expenses']])
-    # })
-    
     output$expenseIncomePlot <- renderPlot({
         financePlot(values[['income']], values[['expenses']], 
                      screen_dim = my_screen_width())
     }, height = 500)
+    
+    # collect text inputs ----
+    observeEvent(input$needs, {
+        values$needs <- input$needs
+    })
+    observeEvent(input$resourcesIndividual, { 
+        values$resources$individual <- input$resourcesIndividual
+    })
+    observeEvent(input$resourcesFamily, {
+        values$resources$family <- input$resourcesFamily
+    })
+    observeEvent(input$resourcesCommunity, {
+        values$resources$community <- input$resourcesCommunity
+    })
+    observeEvent(input$myServiceIdeas, { values$service$proposed <- input$myServiceIdeas })
+    observeEvent(input$myServicePlan, { values$service$confirmed <- input$myServicePlan })
+    observeEvent(input$memberSign, { values$commitment$member <- input$memberSign })
+    observeEvent(input$spouseSign, { values$commitment$spouse <- input$spouseSign })
     
     # make report ----
     output$report <- downloadHandler(
@@ -824,18 +857,15 @@ server <- function(input, output, session) {
             file.copy("report.Rmd", tempReport, overwrite = TRUE)
             
             # Set up parameters to pass to Rmd document
-            author <- if_else(
-                input$spouseSign == "",
-                input$memberSign,
-                paste(c(input$memberSign, input$spouseSign), collapse = " and ")
-            )
+            author <- values$commitment %>% unlist
+            author <- author[author != ""] %>% paste(collapse = " and ")
             
             params <- list(
                 set_author = author,
-                set_member = input$memberSign,
-                set_spouse = input$spouseSign,
+                set_member = values$commitment$member,
+                set_spouse = values$commitment$spouse,
                 set_date = format(Sys.Date(), "%d %b %Y"),
-                set_needs = input$needs,
+                set_needs = values$needs,
                 set_income = financeTable(values[['income']]),
                 set_expenses = financeTable(values[['expenses']]),
                 set_financePlot = financePlot(values[['income']], 
@@ -843,12 +873,12 @@ server <- function(input, output, session) {
                                                screen_dim = 800),
                 set_financeBalance = verbose_balance(values[['income']], 
                                                      values[['expenses']]),
-                set_resourcesIndividual = input$resourcesIndividual,
-                set_resourcesFamily = input$resourcesFamily,
-                set_resourcesCommunity = input$resourcesCommunity,
+                set_resourcesIndividual = values$resources$individual,
+                set_resourcesFamily = values$resources$family,
+                set_resourcesCommunity = values$resources$community,
                 set_myPlan = planTable(values[['plan']]),
-                set_serviceIdeas = input$myServiceIdeas,
-                set_servicePlan = input$myServicePlan
+                set_serviceIdeas = values$service$proposed,
+                set_servicePlan = values$service$confirmed
             )
             
             # Knit the document, passing in the `params` list, and eval it in a
@@ -859,6 +889,29 @@ server <- function(input, output, session) {
                               envir = new.env(parent = globalenv())
             )
         }
+    )
+    
+    # download session ----
+    output$mysession <- downloadHandler(
+        
+        filename <- function(){
+            paste("self_reliance_session.Rdata")
+        },
+        
+        content = function(file) {
+            selfreliance <- list(
+                income = values$income,
+                expenses = values$expenses,
+                plan = values$plan,
+                needs = values$needs,
+                resources = values$resources,
+                service = values$service,
+                commitment = values$commitment
+            )
+            
+            save(selfreliance, file = file)
+        }
+        
     )
 }
 
